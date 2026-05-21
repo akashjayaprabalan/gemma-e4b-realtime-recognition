@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gemma Vision</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="stage" aria-label="Camera">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Gemma 4 E4B 8-bit</p>
+            <h1>Live Recognition</h1>
+          </div>
+          <div class="toolbar">
+            <button id="startButton" class="primary" type="button">Start</button>
+            <button id="stopButton" type="button" disabled>Stop</button>
+          </div>
+        </div>
+
+        <div class="videoWrap">
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="canvas" hidden></canvas>
+          <div id="emptyState" class="emptyState">Camera idle</div>
+        </div>
+
+        <div class="statusRow" aria-live="polite">
+          <span id="statusDot" class="statusDot"></span>
+          <span id="statusText">Cold</span>
+          <span id="latencyText"></span>
+        </div>
+      </section>
+
+      <aside class="results" aria-label="Recognition results">
+        <section class="panel captionPanel">
+          <p class="label">Caption</p>
+          <p id="caption" class="caption">No frame analyzed yet.</p>
+        </section>
+
+        <section class="panel">
+          <p class="label">Labels</p>
+          <div id="labels" class="chips"></div>
+        </section>
+
+        <section class="panel">
+          <p class="label">Objects</p>
+          <ul id="objects" class="list"></ul>
+        </section>
+
+        <section class="panel">
+          <p class="label">Text Seen</p>
+          <ul id="textSeen" class="list"></ul>
+        </section>
+
+        <section class="panel">
+          <p class="label">Alerts</p>
+          <ul id="alerts" class="list"></ul>
+        </section>
+      </aside>
+    </main>
+    <script src="/static/app.js" type="module"></script>
+  </body>
+</html>
