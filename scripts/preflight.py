@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import platform
 import shutil
 import subprocess
@@ -19,6 +20,7 @@ def main() -> int:
         check_disk(),
         check_imports(),
         check_hub_model(),
+        check_cached_model(),
     ]
 
     print("\nPreflight")
@@ -49,9 +51,7 @@ def check_disk() -> tuple[bool, str]:
 def check_imports() -> tuple[bool, str]:
     missing = []
     for module in ("fastapi", "PIL", "huggingface_hub", "mlx", "mlx_vlm"):
-        try:
-            __import__(module)
-        except ImportError:
+        if importlib.util.find_spec(module) is None:
             missing.append(module)
     if missing:
         return False, f"Missing imports: {', '.join(missing)}"
@@ -75,6 +75,22 @@ def check_hub_model() -> tuple[bool, str]:
     modified = data.get("lastModified", "unknown")
     sha = str(data.get("sha", "unknown"))[:12]
     return True, f"{MODEL_ID} available, modified {modified}, sha {sha}"
+
+
+def check_cached_model() -> tuple[bool, str]:
+    cache_root = Path.home() / ".cache/huggingface/hub/models--mlx-community--gemma-4-e4b-it-8bit"
+    if not cache_root.exists():
+        return False, f"{MODEL_ID} is not cached yet"
+    incomplete = list(cache_root.glob("**/*.incomplete"))
+    if incomplete:
+        return False, f"{MODEL_ID} has {len(incomplete)} incomplete cache file(s)"
+    snapshots = list(cache_root.glob("snapshots/*"))
+    for snapshot in snapshots:
+        shard_one = snapshot / "model-00001-of-00002.safetensors"
+        shard_two = snapshot / "model-00002-of-00002.safetensors"
+        if shard_one.exists() and shard_two.exists():
+            return True, f"{MODEL_ID} cached at {snapshot.name[:12]}"
+    return False, f"{MODEL_ID} cache is missing safetensor shards"
 
 
 if __name__ == "__main__":

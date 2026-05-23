@@ -17,6 +17,8 @@ python3.13 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
+If you move this folder, rebuild `.venv`; Python console scripts store absolute paths.
+
 Check the machine and Hub model:
 
 ```sh
