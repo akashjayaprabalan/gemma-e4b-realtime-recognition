@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import tempfile
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +11,7 @@ from PIL import Image, UnidentifiedImageError
 
 from app.config import JPEG_QUALITY, MAX_IMAGE_EDGE
 
-JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
+JSON_START_RE = re.compile(r"\{")
 
 
 class ImageInputError(ValueError):
@@ -38,12 +39,7 @@ def parse_model_output(raw_output: str) -> dict[str, Any]:
         text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
         text = re.sub(r"\s*```$", "", text)
 
-    candidates = [text]
-    match = JSON_OBJECT_RE.search(text)
-    if match:
-        candidates.append(match.group(0))
-
-    for candidate in candidates:
+    for candidate in _json_candidates(text):
         try:
             payload = json.loads(candidate)
         except json.JSONDecodeError:
@@ -63,7 +59,7 @@ def parse_model_output(raw_output: str) -> dict[str, Any]:
 
 def prepare_frame(data: bytes) -> tuple[Path, dict[str, int]]:
     try:
-        with Image.open(_BytesReader(data)) as image:
+        with Image.open(BytesIO(data)) as image:
             image = image.convert("RGB")
             original_width, original_height = image.size
             image.thumbnail((MAX_IMAGE_EDGE, MAX_IMAGE_EDGE), Image.Resampling.LANCZOS)
@@ -115,29 +111,14 @@ def _string_list(value: Any) -> list[str]:
     return [_string(value)] if _string(value) else []
 
 
-class _BytesReader:
-    def __init__(self, data: bytes) -> None:
-        self.data = data
-        self.offset = 0
-
-    def read(self, size: int = -1) -> bytes:
-        if size is None or size < 0:
-            size = len(self.data) - self.offset
-        chunk = self.data[self.offset : self.offset + size]
-        self.offset += len(chunk)
-        return chunk
-
-    def seek(self, offset: int, whence: int = 0) -> int:
-        if whence == 0:
-            self.offset = offset
-        elif whence == 1:
-            self.offset += offset
-        elif whence == 2:
-            self.offset = len(self.data) + offset
-        else:
-            raise ValueError("invalid whence")
-        self.offset = max(0, min(self.offset, len(self.data)))
-        return self.offset
-
-    def tell(self) -> int:
-        return self.offset
+def _json_candidates(text: str) -> list[str]:
+    candidates = [text]
+    decoder = json.JSONDecoder()
+    for match in JSON_START_RE.finditer(text):
+        try:
+            payload, end = decoder.raw_decode(text[match.start() :])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            candidates.append(text[match.start() : match.start() + end])
+    return candidates

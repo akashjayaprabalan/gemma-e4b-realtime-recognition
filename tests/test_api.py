@@ -52,6 +52,30 @@ def test_recognize_rejects_oversized_upload() -> None:
     assert response.json()["detail"] == "Image is too large."
 
 
+def test_recognize_accepts_octet_stream_image(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def recognize_stub(_path):
+        return {
+            "caption": "Blue frame.",
+            "labels": ["blue"],
+            "objects": [],
+            "text_seen": [],
+            "alerts": [],
+            "raw_output": "{}",
+            "latency_ms": 1,
+            "model_id": "test-model",
+        }
+
+    monkeypatch.setattr("app.main.model_service.recognize", recognize_stub)
+
+    response = client.post(
+        "/api/recognize",
+        files={"image": ("frame", _jpeg_bytes(), None)},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["caption"] == "Blue frame."
+
+
 def test_recognize_wraps_model_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fail_recognize(_path):
         raise RuntimeError("model unavailable")

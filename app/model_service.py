@@ -21,10 +21,10 @@ class ModelService:
         self._lock = asyncio.Lock()
 
     def status(self) -> dict[str, Any]:
-        if self._model is not None:
+        if self._lock.locked():
+            state = "busy" if self._model is not None else "loading"
+        elif self._model is not None:
             state = "ready"
-        elif self._lock.locked():
-            state = "loading"
         elif self._load_error:
             state = "error"
         else:
