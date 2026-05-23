@@ -38,10 +38,13 @@ async def health() -> dict[str, object]:
 
 @app.post("/api/recognize")
 async def recognize(image: UploadFile = File(...)) -> JSONResponse:
-    if image.content_type and not image.content_type.startswith("image/"):
+    if image.content_type and not (
+        image.content_type.startswith("image/")
+        or image.content_type == "application/octet-stream"
+    ):
         raise HTTPException(status_code=415, detail="Upload must be an image.")
 
-    data = await image.read()
+    data = await image.read(MAX_UPLOAD_BYTES + 1)
     if not data:
         raise HTTPException(status_code=400, detail="Upload is empty.")
     if len(data) > MAX_UPLOAD_BYTES:

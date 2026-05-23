@@ -36,6 +36,15 @@ def test_parse_fallback_uses_caption() -> None:
     assert payload["labels"] == []
 
 
+def test_parse_embedded_json_ignores_trailing_text() -> None:
+    payload = parse_model_output(
+        'Result: {"caption":"A box.","labels":["box"]} trailing note'
+    )
+
+    assert payload["caption"] == "A box."
+    assert payload["labels"] == ["box"]
+
+
 def test_prepare_frame_resizes_and_writes_jpeg() -> None:
     source = BytesIO()
     Image.new("RGB", (1600, 1200), "green").save(source, format="PNG")
